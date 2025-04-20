@@ -1,0 +1,52 @@
+@page "/posttest"
+@rendermode InteractiveServer 
+@* Added rendermode *@ @* Moved comment to new line *@
+@* Removed @inherits PostTestBase *@
+@using System.Diagnostics @* Add using for Debug *@
+@using System.Net.Http @* Add using for HttpClient *@
+@inject HttpClient Http 
+@* Added HttpClient injection here *@ @* Moved comment to new line *@
+
+<PageTitle>POST Request Test</PageTitle>
+
+<h3>测试 POST 请求</h3>
+
+<p>
+    点击按钮显示 "Hello World"。 @* Updated description *@
+</p>
+
+@* --- Button remains the same, pointing to ShowHelloWorld --- *@
+<button class="btn btn-success" @onclick="ShowHelloWorld">
+    <span>显示 Hello World</span>
+</button>
+
+<hr />
+
+<h5>测试结果:</h5>
+<pre style="white-space: pre-wrap; word-wrap: break-word; background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; min-height: 100px;">@testResult</pre>
+
+@* --- Moved C# code into @code block --- *@
+@code {
+    private string testResult = "尚未开始测试...";
+
+    // Method for simple test
+    private void ShowHelloWorld()
+    {
+        Debug.WriteLine($"DEBUG: ShowHelloWorld entered at {DateTime.Now}"); // Keep debug line
+        Console.WriteLine($"DEBUG: ShowHelloWorld entered via Console at {DateTime.Now}"); // Keep console line
+        testResult = "hello world";
+        // StateHasChanged(); // StateHasChanged is often implicitly called in @code event handlers, but can be kept if needed.
+    }
+
+    // --- You can move the SendTestPostAsync method and related fields here later if needed ---
+    /*
+    private static readonly string testApiUrl = "https://gemini.abc15018045126.ip-ddns.com/v1/chat/completions";
+    private static readonly string testApiKey = "AIzaSyDmGfx7r-MP8XglVrGkcG51JtTsqSH31uI";
+    private bool isTesting = false;
+
+    private async Task SendTestPostAsync()
+    {
+        // ... implementation ...
+    }
+    */
+}

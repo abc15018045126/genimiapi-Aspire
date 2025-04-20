@@ -1,0 +1,371 @@
+@page "/chatgpt"
+@rendermode InteractiveServer 
+@* --- Added Render Mode --- *@ @* Moved comment to new line *@
+@inject HttpClient Http 
+@* --- Ensure HttpClient is injected --- *@ @* Moved comment to new line *@
+
+@* --- Added necessary using statements --- *@
+@using System.Text
+@using System.Net.Http
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
+@using Newtonsoft.Json
+@using System.Collections.Generic
+@using Microsoft.AspNetCore.Components.Web // For KeyboardEventArgs
+@using System.Diagnostics // For Debug.WriteLine if needed later
+
+<PageTitle>ChatGPT Client</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row">
+
+        @* Chat Display Area *@
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label for="chatOutputTextArea" class="form-label">聊天记录</label>
+                <textarea id="chatOutputTextArea" class="form-control" rows="20" readonly>@chatOutput</textarea>
+            </div>
+
+            <div class="input-group mb-3">
+                <input type="text" @bind="userInput" class="form-control" placeholder="输入消息..." @onkeydown="HandleKeyDown" />
+
+                <button class="btn btn-primary" type="button" @onclick="SendMessageAsync" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span> 发送中...</span>
+                    }
+                    else
+                    {
+                        <span>发送</span>
+                    }
+                </button>
+
+            </div>
+             @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+        </div>
+
+        @* Configuration Area *@
+        <div class="col-md-4">
+            <h5>配置</h5>
+            <hr />
+            <div class="row mb-2 align-items-center">
+                <label for="historyCount" class="col-sm-6 col-form-label">历史记录数量:</label>
+                <div class="col-sm-6">
+                    <input type="number" id="historyCount" class="form-control form-control-sm" @bind="historyCount" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                 <label class="col-sm-6 col-form-label">启用历史限制:</label>
+                 <div class="col-sm-6">
+                     <div class="form-check form-switch">
+                         <input class="form-check-input" type="checkbox" role="switch" id="enableHistoryLimit" @bind="enableHistoryLimit">
+                         <label class="form-check-label" for="enableHistoryLimit"></label>
+                     </div>
+                 </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="dbName" class="col-sm-6 col-form-label">MongoDB 数据库:</label>
+                <div class="col-sm-6">
+                    <input type="text" id="dbName" class="form-control form-control-sm" @bind="mongoDBDatabaseName" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="geminiUrl" class="col-sm-6 col-form-label">Gemini API URL:</label>
+                <div class="col-sm-6">
+                    <input type="text" id="geminiUrl" class="form-control form-control-sm" @bind="geminiApiUrl" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="geminiKey" class="col-sm-6 col-form-label">Gemini API Key:</label>
+                <div class="col-sm-6">
+                    <input type="password" id="geminiKey" class="form-control form-control-sm" @bind="geminiApiKey" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="modelName" class="col-sm-6 col-form-label">模型名称:</label>
+                <div class="col-sm-6">
+                    <input type="text" id="modelName" class="form-control form-control-sm" @bind="modelName" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="temperature" class="col-sm-6 col-form-label">Temperature:</label>
+                <div class="col-sm-6">
+                    <input type="number" step="0.1" id="temperature" class="form-control form-control-sm" @bind="temperature" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="topP" class="col-sm-6 col-form-label">Top P:</label>
+                <div class="col-sm-6">
+                    <input type="number" step="0.1" id="topP" class="form-control form-control-sm" @bind="topP" />
+                </div>
+            </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="topK" class="col-sm-6 col-form-label">Top K:</label>
+                <div class="col-sm-6">
+                    <input type="number" id="topK" class="form-control form-control-sm" @bind="topK" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- Moved all C# code from ChatGPT.razor.cs here --- *@
+@code {
+    private string? userInput;
+    private StringBuilder chatOutputBuilder = new StringBuilder();
+    private string chatOutput => chatOutputBuilder.ToString();
+    private List<ChatMessage> chatHistory = new List<ChatMessage>();
+    private bool isSending = false; // To disable button during request
+    private string? errorMessage = null; // To display errors
+
+    // --- Default Values ---
+    private static readonly string defaultGeminiApiUrl = "https://gemini.abc15018045126.ip-ddns.com/v1/chat/completions";
+    private static readonly string defaultGeminiApiKey = "AIzaSyDmGfx7r-MP8XglVrGkcG51JtTsqSH31uI"; // Consider storing securely
+    private static readonly string defaultModelName = "gemini-2.0-flash";
+    // private static readonly string defaultMongoConnectionString = "mongodb://localhost:27017"; // MongoDB commented out
+
+    // --- Configuration Properties ---
+    private int historyCount = 10;
+    private bool enableHistoryLimit = false;
+    private string mongoDBDatabaseName = "ChatGPTDB"; // MongoDB related, kept for UI binding
+    private string geminiApiUrl = defaultGeminiApiUrl;
+    private string geminiApiKey = defaultGeminiApiKey;
+    private string modelName = defaultModelName;
+    private double? temperature;
+    private double? topP;
+    private int? topK;
+
+    // MongoDB related fields (commented out)
+    // private IMongoClient mongoClient;
+    // private IMongoDatabase database;
+    // private IMongoCollection<BsonDocument> chatLogsCollection;
+
+    // Initialize method (like constructor for Blazor components)
+    protected override void OnInitialized()
+    {
+        // InitializeMongoDB(); // MongoDB commented out
+        AppendMessageToOutput("DEBUG: ChatGPT component initialized."); // Add init log
+    }
+
+    // private void InitializeMongoDB() // MongoDB commented out
+    // { ... }
+
+    private async Task SendMessageAsync()
+    {
+        AppendMessageToOutput("DEBUG: SendMessageAsync entered."); // Re-enable log
+        if (string.IsNullOrWhiteSpace(userInput))
+        {
+            AppendMessageToOutput("DEBUG: SendMessageAsync returning - userInput is null or whitespace."); // Log reason for return
+            return;
+        }
+        if (isSending)
+        {
+            AppendMessageToOutput("DEBUG: SendMessageAsync returning - isSending is true."); // Log reason for return
+            return;
+        }
+
+        AppendMessageToOutput("DEBUG: SendMessageAsync - Setting isSending = true."); // Log before setting flag
+        isSending = true;
+        errorMessage = null; // Clear previous errors
+        StateHasChanged(); // Update UI to show spinner/disable button
+
+        string currentUserInput = userInput; // Capture user input
+        userInput = string.Empty; // Clear input box immediately
+        AppendMessageToOutput($"DEBUG: SendMessageAsync - Captured input: '{currentUserInput}'. Input box cleared."); // Log input capture
+
+        try
+        {
+            // Append user message to UI
+            AppendMessageToOutput($"You: {currentUserInput}");
+            AppendMessageToOutput("DEBUG: SendMessageAsync - About to call CallGeminiApiAsync."); // Log before calling API method
+
+            // --- Call Gemini API ---
+            string geminiResponse = await CallGeminiApiAsync(currentUserInput);
+            AppendMessageToOutput("DEBUG: SendMessageAsync - CallGeminiApiAsync completed."); // Log after calling API method
+            AppendMessageToOutput($"Gemini: {geminiResponse}");
+
+            // --- Save Chat Log (Commented Out) ---
+            // SaveChatLog(currentUserInput, geminiResponse);
+        }
+        catch (Exception ex)
+        {
+            AppendMessageToOutput($"DEBUG: SendMessageAsync - Exception caught: {ex.Message}"); // Log exception
+            errorMessage = $"Error: {ex.Message}\n{ex.StackTrace}"; // Include stack trace for more details
+        }
+        finally
+        {
+            AppendMessageToOutput("DEBUG: SendMessageAsync - Finally block entered. Setting isSending = false."); // Log finally block entry
+            isSending = false;
+            StateHasChanged(); // Update UI (hide spinner, enable button, show error)
+        }
+        AppendMessageToOutput("DEBUG: SendMessageAsync finished."); // Log exit
+    }
+
+    private async Task<string> CallGeminiApiAsync(string input)
+    {
+        AppendMessageToOutput("DEBUG: CallGeminiApiAsync entered."); // Log entry
+        HttpResponseMessage? response = null; // Initialize response to null
+        string responseContent = "Error: Response was null."; // Default error message
+        try
+        {
+            // Get current config values (use defaults if UI values are empty)
+            string apiUrl = string.IsNullOrEmpty(geminiApiUrl) ? defaultGeminiApiUrl : geminiApiUrl;
+            string apiKey = string.IsNullOrEmpty(geminiApiKey) ? defaultGeminiApiKey : geminiApiKey;
+            string currentModelName = string.IsNullOrEmpty(modelName) ? defaultModelName : modelName;
+            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Configs: URL='{apiUrl}', Key='{(string.IsNullOrEmpty(apiKey) ? "EMPTY" : "******")}', Model='{currentModelName}'.");
+
+            chatHistory.Add(new ChatMessage { role = "user", content = input });
+            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added user message to history.");
+
+            if (enableHistoryLimit && historyCount > 0)
+            {
+                while (chatHistory.Count > historyCount)
+                {
+                    chatHistory.RemoveAt(0);
+                }
+                AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - History limited to {historyCount}.");
+            }
+            else if (!enableHistoryLimit)
+            {
+                 AppendMessageToOutput("DEBUG: CallGeminiApiAsync - History limit disabled.");
+            }
+
+            var requestBody = new Dictionary<string, object>
+            {
+                { "model", currentModelName },
+                { "messages", chatHistory }
+            };
+            if (temperature.HasValue) requestBody["temperature"] = temperature.Value;
+            if (topP.HasValue) requestBody["top_p"] = topP.Value;
+            if (topK.HasValue) requestBody["top_k"] = topK.Value;
+            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built.");
+
+            string jsonContent = JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.Indented);
+            AppendMessageToOutput("Request Body:\n" + jsonContent);
+            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body serialized.");
+
+            // --- Prepare and Send HTTP request ---
+            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Preparing HttpRequestMessage..."); // Log before creating request object
+            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl); // Use 'using' for disposable object
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - HttpRequestMessage prepared.");
+
+            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - >>>>>>>> ABOUT TO SEND HTTP REQUEST via Http.SendAsync <<<<<<<<");
+
+            response = await Http.SendAsync(request); // Potential assignment
+            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Http.SendAsync completed. Status Code: {response.StatusCode}");
+
+            // --- Check if response is not null before reading content ---
+            if (response != null)
+            {
+                responseContent = await response.Content.ReadAsStringAsync();
+                AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response content read.");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Non-success status code: {response.StatusCode}. Response: {responseContent}");
+                    return $"Error: API request failed with status {response.StatusCode}. Response: {responseContent}";
+                }
+
+                // --- Process successful response ---
+                AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsing successful response.");
+                dynamic responseObject = JsonConvert.DeserializeObject(responseContent) ?? throw new Exception("Failed to parse API response (result was null).");
+
+                // --- Updated parsing logic based on common API structures ---
+                // Check for 'choices' array (like OpenAI, maybe Gemini too?)
+                if (responseObject.choices != null && responseObject.choices.Count > 0 && responseObject.choices[0].message != null && responseObject.choices[0].message.content != null)
+                {
+                    string geminiResponseText = responseObject.choices[0].message.content;
+                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'choices[0].message.content'.");
+                    chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponseText });
+                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
+                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
+                    return geminiResponseText;
+                }
+                // Check for 'candidates' array (like older Google AI Platform or some Gemini versions?)
+                else if (responseObject.candidates != null && responseObject.candidates.Count > 0 && responseObject.candidates[0].content != null && responseObject.candidates[0].content.parts != null && responseObject.candidates[0].content.parts.Count > 0 && responseObject.candidates[0].content.parts[0].text != null)
+                {
+                    string geminiResponseText = responseObject.candidates[0].content.parts[0].text;
+                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'candidates[0].content.parts[0].text'.");
+                    chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponseText });
+                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
+                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
+                    return geminiResponseText;
+                }
+                else
+                {
+                     AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Unexpected API response format. Raw response: " + responseContent);
+                     throw new Exception("Unexpected API response format. Could not find message content.");
+                }
+            }
+            else
+            {
+                 AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response object was null after SendAsync.");
+                 // responseContent is already set to "Error: Response was null."
+            }
+
+        }
+        catch (HttpRequestException httpEx)
+        {
+            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - HttpRequestException: {httpEx.Message}");
+            if (response != null) {
+                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore read error */ }
+                 AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Response content during exception: {responseContent}");
+            } else {
+                 responseContent = $"HttpRequestException: {httpEx.Message}";
+            }
+            errorMessage = $"Network Error: {httpEx.Message}"; // Update user-facing error
+            return $"Error: {httpEx.Message}"; // Return error string
+        }
+        catch (Exception ex)
+        {
+            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - General Exception: {ex.Message}\nStackTrace: {ex.StackTrace}"); // Add StackTrace
+            errorMessage = $"An unexpected error occurred: {ex.Message}"; // Update user-facing error
+            return $"Error: {ex.Message}"; // Return error string
+        }
+
+        return responseContent; // Fallback return
+    }
+
+    private void AppendMessageToOutput(string message)
+    {
+        chatOutputBuilder.AppendLine(message);
+        InvokeAsync(StateHasChanged); // Use InvokeAsync for thread safety
+        // Consider adding JS interop to scroll the textarea down automatically
+    }
+
+    // MongoDB Save Method (Commented Out)
+    // private void SaveChatLog(string userInput, string geminiResponse)
+    // { ... }
+
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    // Data model for chat messages
+    public class ChatMessage
+    {
+        public string role { get; set; } = string.Empty;
+        public string content { get; set; } = string.Empty;
+    }
+}
