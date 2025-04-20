@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.Web\\AspireApp2.Web.csproj": {}
+    "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.Web\\AspireApp2.Web.csproj": {}
   },
   "projects": {
-    "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj": {
+    "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj",
+        "projectUniqueName": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj",
         "projectName": "AspireApp2.ServiceDefaults",
-        "projectPath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj",
+        "projectPath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj",
         "packagesPath": "C:\\Users\\abc15\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\obj\\",
+        "outputPath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -532,14 +532,14 @@
         }
       }
     },
-    "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.Web\\AspireApp2.Web.csproj": {
+    "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.Web\\AspireApp2.Web.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.Web\\AspireApp2.Web.csproj",
+        "projectUniqueName": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.Web\\AspireApp2.Web.csproj",
         "projectName": "AspireApp2.Web",
-        "projectPath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.Web\\AspireApp2.Web.csproj",
+        "projectPath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.Web\\AspireApp2.Web.csproj",
         "packagesPath": "C:\\Users\\abc15\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.Web\\obj\\",
+        "outputPath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.Web\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -561,8 +561,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj": {
-                "projectPath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj"
+              "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj": {
+                "projectPath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj"
               }
             }
           }

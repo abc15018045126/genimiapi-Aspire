@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "iw6PrJsc3Q4=",
+  "dgSpecHash": "B/rP8T45bcc=",
   "success": true,
-  "projectFilePath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj",
+  "projectFilePath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.ServiceDefaults\\AspireApp2.ServiceDefaults.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\abc15\\.nuget\\packages\\microsoft.extensions.ambientmetadata.application\\9.4.0\\microsoft.extensions.ambientmetadata.application.9.4.0.nupkg.sha512",
     "C:\\Users\\abc15\\.nuget\\packages\\microsoft.extensions.compliance.abstractions\\9.4.0\\microsoft.extensions.compliance.abstractions.9.4.0.nupkg.sha512",
