@@ -1,18 +1,16 @@
 @page "/chatgpt"
-@rendermode InteractiveServer 
-@* --- Added Render Mode --- *@ @* Moved comment to new line *@
+@rendermode InteractiveServer
 @inject HttpClient Http 
-@* --- Ensure HttpClient is injected --- *@ @* Moved comment to new line *@
-
-@* --- Added necessary using statements --- *@
-@using System.Text
-@using System.Net.Http
-@using System.Net.Http.Headers
-@using System.Net.Http.Json
-@using Newtonsoft.Json
-@using System.Collections.Generic
-@using Microsoft.AspNetCore.Components.Web // For KeyboardEventArgs
-@using System.Diagnostics // For Debug.WriteLine if needed later
+@using Microsoft.AspNetCore.Components.Web 
+@using System.Text 
+@using System.Net.Http 
+@using System.Net.Http.Headers 
+@using System.Net.Http.Json 
+@using Newtonsoft.Json 
+@using System.Collections.Generic 
+@using Microsoft.AspNetCore.Components 
+@using System.Threading.Tasks 
+@using System; 
 
 <PageTitle>ChatGPT Client</PageTitle>
 
@@ -53,7 +51,10 @@
         @* Configuration Area *@
         <div class="col-md-4">
             <h5>配置</h5>
-            <hr />
+            <div class="mb-3">
+                <label for="systemPrompt" class="form-label">系统提示词:</label>
+                <textarea id="systemPrompt" class="form-control form-control-sm" rows="3" @bind="systemPrompt"></textarea>
+            </div>
             <div class="row mb-2 align-items-center">
                 <label for="historyCount" class="col-sm-6 col-form-label">历史记录数量:</label>
                 <div class="col-sm-6">
@@ -123,14 +124,22 @@
     </div>
 </div>
 
-@* --- Moved all C# code from ChatGPT.razor.cs here --- *@
 @code {
+    // --- Injected Services ---
+    // HttpClient is injected via @inject at the top now
+    // [Inject]
+    // private HttpClient Http { get; set; } = default!; // No longer needed here
+
+    // --- Component State ---
     private string? userInput;
     private StringBuilder chatOutputBuilder = new StringBuilder();
     private string chatOutput => chatOutputBuilder.ToString();
     private List<ChatMessage> chatHistory = new List<ChatMessage>();
     private bool isSending = false; // To disable button during request
     private string? errorMessage = null; // To display errors
+    private string? systemPrompt { get; set; } // Property to hold the system prompt, required for @bind
+
+    private int outputLevel = 3; // 1: Minimal, 2: Request Body, 3: Debug (Default)
 
     // --- Default Values ---
     private static readonly string defaultGeminiApiUrl = "https://gemini.abc15018045126.ip-ddns.com/v1/chat/completions";
@@ -158,201 +167,222 @@
     protected override void OnInitialized()
     {
         // InitializeMongoDB(); // MongoDB commented out
-        AppendMessageToOutput("DEBUG: ChatGPT component initialized."); // Add init log
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: ChatGPT component initialized."); // Conditional logging
     }
 
     // private void InitializeMongoDB() // MongoDB commented out
-    // { ... }
+    // { ... } // Keep commented out code if needed
 
     private async Task SendMessageAsync()
     {
-        AppendMessageToOutput("DEBUG: SendMessageAsync entered."); // Re-enable log
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync entered."); // Conditional logging
+
         if (string.IsNullOrWhiteSpace(userInput))
         {
-            AppendMessageToOutput("DEBUG: SendMessageAsync returning - userInput is null or whitespace."); // Log reason for return
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync returning - userInput is null or whitespace."); // Conditional logging
             return;
         }
         if (isSending)
         {
-            AppendMessageToOutput("DEBUG: SendMessageAsync returning - isSending is true."); // Log reason for return
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync returning - isSending is true."); // Conditional logging
             return;
         }
 
-        AppendMessageToOutput("DEBUG: SendMessageAsync - Setting isSending = true."); // Log before setting flag
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - Setting isSending = true."); // Conditional logging
         isSending = true;
         errorMessage = null; // Clear previous errors
         StateHasChanged(); // Update UI to show spinner/disable button
 
         string currentUserInput = userInput; // Capture user input
         userInput = string.Empty; // Clear input box immediately
-        AppendMessageToOutput($"DEBUG: SendMessageAsync - Captured input: '{currentUserInput}'. Input box cleared."); // Log input capture
+        if (outputLevel == 3) AppendMessageToOutput($"DEBUG: SendMessageAsync - Captured input: '{currentUserInput}'. Input box cleared."); // Conditional logging
 
         try
         {
-            // Append user message to UI
             AppendMessageToOutput($"You: {currentUserInput}");
-            AppendMessageToOutput("DEBUG: SendMessageAsync - About to call CallGeminiApiAsync."); // Log before calling API method
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - About to call CallGeminiApiAsync."); // Conditional logging
 
-            // --- Call Gemini API ---
             string geminiResponse = await CallGeminiApiAsync(currentUserInput);
-            AppendMessageToOutput("DEBUG: SendMessageAsync - CallGeminiApiAsync completed."); // Log after calling API method
-            AppendMessageToOutput($"Gemini: {geminiResponse}");
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - CallGeminiApiAsync completed."); // Conditional logging
 
-            // --- Save Chat Log (Commented Out) ---
-            // SaveChatLog(currentUserInput, geminiResponse);
+            if (!geminiResponse.StartsWith("Error:"))
+            {
+                AppendMessageToOutput($"Gemini: {geminiResponse}");
+            }
+            else
+            {
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: SendMessageAsync - Received error from CallGeminiApiAsync: {geminiResponse}");
+            }
+
+            // SaveChatLog(currentUserInput, geminiResponse); // MongoDB commented out
         }
         catch (Exception ex)
         {
-            AppendMessageToOutput($"DEBUG: SendMessageAsync - Exception caught: {ex.Message}"); // Log exception
-            errorMessage = $"Error: {ex.Message}\n{ex.StackTrace}"; // Include stack trace for more details
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: SendMessageAsync - Exception caught: {ex.Message}"); // Conditional logging
+            errorMessage = $"Error: {ex.Message}\n{ex.StackTrace}";
         }
         finally
         {
-            AppendMessageToOutput("DEBUG: SendMessageAsync - Finally block entered. Setting isSending = false."); // Log finally block entry
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - Finally block entered. Setting isSending = false."); // Conditional logging
             isSending = false;
-            StateHasChanged(); // Update UI (hide spinner, enable button, show error)
+            StateHasChanged(); // Update UI
         }
-        AppendMessageToOutput("DEBUG: SendMessageAsync finished."); // Log exit
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync finished."); // Conditional logging
     }
 
     private async Task<string> CallGeminiApiAsync(string input)
     {
-        AppendMessageToOutput("DEBUG: CallGeminiApiAsync entered."); // Log entry
-        HttpResponseMessage? response = null; // Initialize response to null
-        string responseContent = "Error: Response was null."; // Default error message
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync entered."); // Conditional logging
+        HttpResponseMessage? response = null;
+        string responseContent = "Error: Response was null.";
+
         try
         {
-            // Get current config values (use defaults if UI values are empty)
             string apiUrl = string.IsNullOrEmpty(geminiApiUrl) ? defaultGeminiApiUrl : geminiApiUrl;
             string apiKey = string.IsNullOrEmpty(geminiApiKey) ? defaultGeminiApiKey : geminiApiKey;
             string currentModelName = string.IsNullOrEmpty(modelName) ? defaultModelName : modelName;
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Configs: URL='{apiUrl}', Key='{(string.IsNullOrEmpty(apiKey) ? "EMPTY" : "******")}', Model='{currentModelName}'.");
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Configs: URL='{apiUrl}', Key='{(string.IsNullOrEmpty(apiKey) ? "EMPTY" : "******")}', Model='{currentModelName}'.");
 
-            chatHistory.Add(new ChatMessage { role = "user", content = input });
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added user message to history.");
+            var currentMessages = new List<ChatMessage>();
+
+            if (!string.IsNullOrWhiteSpace(systemPrompt))
+            {
+                currentMessages.Add(new ChatMessage { role = "system", content = systemPrompt });
+                if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added system prompt to current request messages.");
+            }
+
+            if (!enableHistoryLimit || historyCount > 0)
+            {
+                 currentMessages.AddRange(chatHistory.Where(m => m.role != "system"));
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Added {chatHistory.Count} messages from history to request.");
+            } else {
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - History limit enabled with count 0. Skipping adding history messages to request.");
+            }
+
+            currentMessages.Add(new ChatMessage { role = "user", content = input });
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added user message to current request messages.");
 
             if (enableHistoryLimit && historyCount > 0)
             {
-                while (chatHistory.Count > historyCount)
-                {
-                    chatHistory.RemoveAt(0);
-                }
-                AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - History limited to {historyCount}.");
+                 int messagesToKeep = historyCount * 2;
+                 if (!string.IsNullOrWhiteSpace(systemPrompt)) messagesToKeep += 1;
+                 int minMessages = string.IsNullOrWhiteSpace(systemPrompt) ? 1 : 2;
+
+                 while (currentMessages.Count > messagesToKeep && currentMessages.Count > minMessages)
+                 {
+                     int removeIndex = string.IsNullOrWhiteSpace(systemPrompt) ? 0 : 1;
+                     if (currentMessages.Count > removeIndex) currentMessages.RemoveAt(removeIndex);
+                     else break;
+                 }
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Message list limited (count > 0) for API call. Count: {currentMessages.Count}.");
             }
             else if (!enableHistoryLimit)
             {
-                 AppendMessageToOutput("DEBUG: CallGeminiApiAsync - History limit disabled.");
+                 if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - History limit disabled for API call.");
             }
 
             var requestBody = new Dictionary<string, object>
             {
                 { "model", currentModelName },
-                { "messages", chatHistory }
+                { "messages", currentMessages }
             };
             if (temperature.HasValue) requestBody["temperature"] = temperature.Value;
             if (topP.HasValue) requestBody["top_p"] = topP.Value;
             if (topK.HasValue) requestBody["top_k"] = topK.Value;
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built.");
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built.");
 
             string jsonContent = JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.Indented);
-            AppendMessageToOutput("Request Body:\n" + jsonContent);
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body serialized.");
+            if (outputLevel >= 2) AppendMessageToOutput("Request Body:\n" + jsonContent);
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body serialized.");
 
-            // --- Prepare and Send HTTP request ---
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Preparing HttpRequestMessage..."); // Log before creating request object
-            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl); // Use 'using' for disposable object
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Preparing HttpRequestMessage...");
+            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - HttpRequestMessage prepared.");
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - HttpRequestMessage prepared.");
 
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - >>>>>>>> ABOUT TO SEND HTTP REQUEST via Http.SendAsync <<<<<<<<");
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - >>>>>>>> ABOUT TO SEND HTTP REQUEST via Http.SendAsync <<<<<<<<");
+            response = await Http.SendAsync(request); // Http is now injected via @inject
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Http.SendAsync completed. Status Code: {(response?.StatusCode.ToString() ?? "N/A")}");
 
-            response = await Http.SendAsync(request); // Potential assignment
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Http.SendAsync completed. Status Code: {response.StatusCode}");
-
-            // --- Check if response is not null before reading content ---
             if (response != null)
             {
                 responseContent = await response.Content.ReadAsStringAsync();
-                AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response content read.");
+                if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response content read.");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Non-success status code: {response.StatusCode}. Response: {responseContent}");
+                    if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Non-success status code: {response.StatusCode}. Response: {responseContent}");
+                    errorMessage = $"Error: API request failed with status {response.StatusCode}.";
                     return $"Error: API request failed with status {response.StatusCode}. Response: {responseContent}";
                 }
 
-                // --- Process successful response ---
-                AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsing successful response.");
+                if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsing successful response.");
                 dynamic responseObject = JsonConvert.DeserializeObject(responseContent) ?? throw new Exception("Failed to parse API response (result was null).");
 
-                // --- Updated parsing logic based on common API structures ---
-                // Check for 'choices' array (like OpenAI, maybe Gemini too?)
+                string? geminiResponseText = null;
+
                 if (responseObject.choices != null && responseObject.choices.Count > 0 && responseObject.choices[0].message != null && responseObject.choices[0].message.content != null)
                 {
-                    string geminiResponseText = responseObject.choices[0].message.content;
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'choices[0].message.content'.");
-                    chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponseText });
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
-                    return geminiResponseText;
+                    geminiResponseText = responseObject.choices[0].message.content;
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'choices[0].message.content'.");
                 }
-                // Check for 'candidates' array (like older Google AI Platform or some Gemini versions?)
                 else if (responseObject.candidates != null && responseObject.candidates.Count > 0 && responseObject.candidates[0].content != null && responseObject.candidates[0].content.parts != null && responseObject.candidates[0].content.parts.Count > 0 && responseObject.candidates[0].content.parts[0].text != null)
                 {
-                    string geminiResponseText = responseObject.candidates[0].content.parts[0].text;
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'candidates[0].content.parts[0].text'.");
-                    chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponseText });
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
+                    geminiResponseText = responseObject.candidates[0].content.parts[0].text;
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'candidates[0].content.parts[0].text'.");
+                }
+
+                if (geminiResponseText != null)
+                {
+                    UpdatePersistentHistory(input, geminiResponseText);
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
                     return geminiResponseText;
                 }
                 else
                 {
-                     AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Unexpected API response format. Raw response: " + responseContent);
+                     if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Unexpected API response format. Raw response: " + responseContent);
+                     errorMessage = "Error: Unexpected API response format.";
                      throw new Exception("Unexpected API response format. Could not find message content.");
                 }
             }
             else
             {
-                 AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response object was null after SendAsync.");
-                 // responseContent is already set to "Error: Response was null."
+                 if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response object was null after SendAsync.");
+                 errorMessage = "Error: No response received from API.";
             }
-
         }
         catch (HttpRequestException httpEx)
         {
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - HttpRequestException: {httpEx.Message}");
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - HttpRequestException: {httpEx.Message}");
             if (response != null) {
-                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore read error */ }
-                 AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Response content during exception: {responseContent}");
+                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore */ }
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Response content during exception: {responseContent}");
             } else {
                  responseContent = $"HttpRequestException: {httpEx.Message}";
             }
-            errorMessage = $"Network Error: {httpEx.Message}"; // Update user-facing error
-            return $"Error: {httpEx.Message}"; // Return error string
+            errorMessage = $"Network Error: {httpEx.Message}";
+            return $"Error: {httpEx.Message}";
         }
         catch (Exception ex)
         {
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - General Exception: {ex.Message}\nStackTrace: {ex.StackTrace}"); // Add StackTrace
-            errorMessage = $"An unexpected error occurred: {ex.Message}"; // Update user-facing error
-            return $"Error: {ex.Message}"; // Return error string
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - General Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+            return $"Error: {ex.Message}";
         }
 
-        return responseContent; // Fallback return
+        return responseContent;
     }
 
     private void AppendMessageToOutput(string message)
     {
         chatOutputBuilder.AppendLine(message);
-        InvokeAsync(StateHasChanged); // Use InvokeAsync for thread safety
-        // Consider adding JS interop to scroll the textarea down automatically
+        InvokeAsync(StateHasChanged);
     }
 
     // MongoDB Save Method (Commented Out)
     // private void SaveChatLog(string userInput, string geminiResponse)
     // { ... }
-
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
@@ -367,5 +397,28 @@
     {
         public string role { get; set; } = string.Empty;
         public string content { get; set; } = string.Empty;
+    }
+
+    private void UpdatePersistentHistory(string userInput, string assistantResponse)
+    {
+        if (enableHistoryLimit && historyCount == 0)
+        {
+            chatHistory.Clear();
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: UpdatePersistentHistory - Persistent history cleared (limit is 0).");
+        }
+
+        chatHistory.Add(new ChatMessage { role = "user", content = userInput });
+        chatHistory.Add(new ChatMessage { role = "assistant", content = assistantResponse });
+        if (outputLevel == 3) AppendMessageToOutput($"DEBUG: UpdatePersistentHistory - Added user/assistant messages. History count: {chatHistory.Count}");
+
+        if (enableHistoryLimit && historyCount > 0)
+        {
+            int maxHistoryMessages = historyCount * 2;
+            while (chatHistory.Count > maxHistoryMessages && maxHistoryMessages >= 0)
+            {
+                chatHistory.RemoveAt(0);
+            }
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: UpdatePersistentHistory - Persistent history limited (count > 0) to {chatHistory.Count} messages.");
+        }
     }
 }

@@ -17,9 +17,7 @@
       },
       "Microsoft.Extensions.AmbientMetadata.Application/9.4.0": {
         "dependencies": {
-          "Microsoft.Extensions.Configuration": "9.0.0",
-          "Microsoft.Extensions.Hosting.Abstractions": "9.0.0",
-          "Microsoft.Extensions.Options.ConfigurationExtensions": "9.0.0"
+          "Microsoft.Extensions.Hosting.Abstractions": "9.0.0"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.AmbientMetadata.Application.dll": {
@@ -106,9 +104,7 @@
       },
       "Microsoft.Extensions.Diagnostics/8.0.1": {
         "dependencies": {
-          "Microsoft.Extensions.Configuration": "9.0.0",
-          "Microsoft.Extensions.Diagnostics.Abstractions": "9.0.0",
-          "Microsoft.Extensions.Options.ConfigurationExtensions": "9.0.0"
+          "Microsoft.Extensions.Diagnostics.Abstractions": "9.0.0"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.Diagnostics.dll": {
@@ -177,7 +173,6 @@
       },
       "Microsoft.Extensions.Http/8.0.1": {
         "dependencies": {
-          "Microsoft.Extensions.Configuration.Abstractions": "9.0.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.0",
           "Microsoft.Extensions.Diagnostics": "8.0.1",
           "Microsoft.Extensions.Logging": "9.0.0",
@@ -195,9 +190,7 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.AutoActivation": "9.4.0",
           "Microsoft.Extensions.Http": "8.0.1",
-          "Microsoft.Extensions.Options.ConfigurationExtensions": "9.0.0",
-          "Microsoft.Extensions.Telemetry": "9.4.0",
-          "System.IO.Pipelines": "8.0.0"
+          "Microsoft.Extensions.Telemetry": "9.4.0"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.Http.Diagnostics.dll": {
@@ -310,7 +303,6 @@
         "dependencies": {
           "Microsoft.Extensions.Diagnostics": "8.0.1",
           "Microsoft.Extensions.Diagnostics.ExceptionSummarization": "9.4.0",
-          "Microsoft.Extensions.Options.ConfigurationExtensions": "9.0.0",
           "Microsoft.Extensions.Telemetry.Abstractions": "9.4.0",
           "Polly.Extensions": "8.4.2",
           "Polly.RateLimiting": "8.4.2"
@@ -324,14 +316,12 @@
       },
       "Microsoft.Extensions.ServiceDiscovery/9.2.0": {
         "dependencies": {
-          "Microsoft.Extensions.Configuration.Abstractions": "9.0.0",
           "Microsoft.Extensions.Configuration.Binder": "9.0.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.0",
           "Microsoft.Extensions.Features": "8.0.15",
           "Microsoft.Extensions.Http": "8.0.1",
           "Microsoft.Extensions.Logging.Abstractions": "9.0.0",
           "Microsoft.Extensions.Options": "9.0.0",
-          "Microsoft.Extensions.Primitives": "9.0.0",
           "Microsoft.Extensions.ServiceDiscovery.Abstractions": "9.2.0"
         },
         "runtime": {
@@ -343,13 +333,11 @@
       },
       "Microsoft.Extensions.ServiceDiscovery.Abstractions/9.2.0": {
         "dependencies": {
-          "Microsoft.Extensions.Configuration.Abstractions": "9.0.0",
           "Microsoft.Extensions.Configuration.Binder": "9.0.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.0",
           "Microsoft.Extensions.Features": "8.0.15",
           "Microsoft.Extensions.Logging.Abstractions": "9.0.0",
-          "Microsoft.Extensions.Options": "9.0.0",
-          "Microsoft.Extensions.Primitives": "9.0.0"
+          "Microsoft.Extensions.Options": "9.0.0"
         },
         "runtime": {
           "lib/net8.0/Microsoft.Extensions.ServiceDiscovery.Abstractions.dll": {
@@ -499,8 +487,6 @@
       },
       "Polly.Extensions/8.4.2": {
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "9.0.0",
-          "Microsoft.Extensions.Options": "9.0.0",
           "Polly.Core": "8.4.2"
         },
         "runtime": {
@@ -512,8 +498,7 @@
       },
       "Polly.RateLimiting/8.4.2": {
         "dependencies": {
-          "Polly.Core": "8.4.2",
-          "System.Threading.RateLimiting": "8.0.0"
+          "Polly.Core": "8.4.2"
         },
         "runtime": {
           "lib/net8.0/Polly.RateLimiting.dll": {
@@ -530,8 +515,6 @@
           }
         }
       },
-      "System.IO.Pipelines/8.0.0": {},
-      "System.Threading.RateLimiting/8.0.0": {},
       "AspireApp2.ServiceDefaults/1.0.0": {
         "dependencies": {
           "Microsoft.Extensions.Http.Resilience": "9.4.0",
@@ -850,20 +833,6 @@
       "sha512": "sha512-ddppcFpnbohLWdYKr/ZeLZHmmI+DXFgZ3Snq+/E7SwcdW4UnvxmaugkwGywvGVWkHPGCSZjCP+MLzu23AL5SDw==",
       "path": "system.diagnostics.diagnosticsource/9.0.0",
       "hashPath": "system.diagnostics.diagnosticsource.9.0.0.nupkg.sha512"
-    },
-    "System.IO.Pipelines/8.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-FHNOatmUq0sqJOkTx+UF/9YK1f180cnW5FVqnQMvYUN0elp6wFzbtPSiqbo1/ru8ICp43JM1i7kKkk6GsNGHlA==",
-      "path": "system.io.pipelines/8.0.0",
-      "hashPath": "system.io.pipelines.8.0.0.nupkg.sha512"
-    },
-    "System.Threading.RateLimiting/8.0.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-7mu9v0QDv66ar3DpGSZHg9NuNcxDaaAcnMULuZlaTpP9+hwXhrxNGsF5GmLkSHxFdb5bBc1TzeujsRgTrPWi+Q==",
-      "path": "system.threading.ratelimiting/8.0.0",
-      "hashPath": "system.threading.ratelimiting.8.0.0.nupkg.sha512"
     },
     "AspireApp2.ServiceDefaults/1.0.0": {
       "type": "project",
