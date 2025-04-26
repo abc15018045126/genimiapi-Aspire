@@ -145,3 +145,16 @@ C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\AspireApp2.Web.genruntimeconfig.cache
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\ref\AspireApp2.Web.dll
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.build.json.cache
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\AWSSDK.Core.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\AWSSDK.SecurityToken.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\DnsClient.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\MongoDB.Bson.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\MongoDB.Driver.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\MongoDB.Driver.Core.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\MongoDB.Libmongocrypt.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\SharpCompress.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\Snappier.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\ZstdSharp.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\runtimes\linux\native\libmongocrypt.so
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\runtimes\osx\native\libmongocrypt.dylib
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\bin\Debug\net8.0\runtimes\win\native\mongocrypt.dll
