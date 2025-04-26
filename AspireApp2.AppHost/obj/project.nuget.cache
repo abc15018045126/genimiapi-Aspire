@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "LQ8NHWKzWSU=",
+  "dgSpecHash": "GaMFytsV+A4=",
   "success": true,
-  "projectFilePath": "C:\\Users\\abc15\\source\\repos\\AspireApp2\\AspireApp2.AppHost\\AspireApp2.AppHost.csproj",
+  "projectFilePath": "C:\\Users\\abc15\\Documents\\GitHub\\genimiapi-Aspire\\AspireApp2.AppHost\\AspireApp2.AppHost.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\abc15\\.nuget\\packages\\aspire.dashboard.sdk.win-x64\\9.2.0\\aspire.dashboard.sdk.win-x64.9.2.0.nupkg.sha512",
     "C:\\Users\\abc15\\.nuget\\packages\\aspire.hosting\\9.2.0\\aspire.hosting.9.2.0.nupkg.sha512",

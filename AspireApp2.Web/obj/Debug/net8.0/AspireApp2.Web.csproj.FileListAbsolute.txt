@@ -136,7 +136,6 @@ C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\scopedcss\bundle\AspireApp2.Web.styles.css
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\scopedcss\projectbundle\AspireApp2.Web.bundle.scp.css
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.build.json
-C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.build.json.cache
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.build.endpoints.json
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\AspireAp.CB619F61.Up2Date
@@ -145,3 +144,10 @@ C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\AspireApp2.Web.pdb
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\AspireApp2.Web.genruntimeconfig.cache
 C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\ref\AspireApp2.Web.dll
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets\msbuild.AspireApp2.Web.Microsoft.AspNetCore.StaticWebAssets.props
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets\msbuild.AspireApp2.Web.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets\msbuild.build.AspireApp2.Web.props
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.AspireApp2.Web.props
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.AspireApp2.Web.props
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.pack.json
+C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.Web\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

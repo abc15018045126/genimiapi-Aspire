@@ -7,5 +7,5 @@ namespace Projects;
 [global::System.Diagnostics.DebuggerDisplay("Type = {GetType().Name,nq}, ProjectPath = {ProjectPath}")]
 public class AspireApp2_ApiService : global::Aspire.Hosting.IProjectMetadata
 {
-    public string ProjectPath => """C:\Users\abc15\source\repos\AspireApp2\AspireApp2.ApiService\AspireApp2.ApiService.csproj""";
+    public string ProjectPath => """C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.ApiService\AspireApp2.ApiService.csproj""";
 }
