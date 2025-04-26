@@ -120,6 +120,14 @@
                     <input type="number" id="topK" class="form-control form-control-sm" @bind="topK" />
                 </div>
             </div>
+
+            <div class="row mb-2 align-items-center">
+                <label for="outputLevel" class="col-sm-6 col-form-label">输出级别 (1-3):</label>
+                <div class="col-sm-6">
+                    <input type="number" id="outputLevel" class="form-control form-control-sm" @bind="outputLevel" />
+                </div>
+            </div>
+            
         </div>
     </div>
 </div>
@@ -139,7 +147,7 @@
     private string? errorMessage = null; // To display errors
     private string? systemPrompt { get; set; } // Property to hold the system prompt, required for @bind
 
-    private int outputLevel = 3; // 1: Minimal, 2: Request Body, 3: Debug (Default)
+    private int outputLevel = 3; // Default level is 3
 
     // --- Default Values ---
     private static readonly string defaultGeminiApiUrl = "https://gemini.abc15018045126.ip-ddns.com/v1/chat/completions";
@@ -313,8 +321,7 @@
                 if (!response.IsSuccessStatusCode)
                 {
                     if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Non-success status code: {response.StatusCode}. Response: {responseContent}");
-                    errorMessage = $"Error: API request failed with status {response.StatusCode}.";
-                    return $"Error: API request failed with status {response.StatusCode}. Response: {responseContent}";
+                    errorMessage = $"Error: API request failed with status {response.StatusCode}. Response: {responseContent}";
                 }
 
                 if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsing successful response.");
@@ -356,7 +363,7 @@
         {
             if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - HttpRequestException: {httpEx.Message}");
             if (response != null) {
-                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore */ }
+                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore read error */ }
                  if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Response content during exception: {responseContent}");
             } else {
                  responseContent = $"HttpRequestException: {httpEx.Message}";
