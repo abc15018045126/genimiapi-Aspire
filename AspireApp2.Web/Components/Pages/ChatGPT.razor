@@ -22,7 +22,10 @@
         @* Chat Display Area *@
         <div class="col-md-8">
             <div class="mb-3">
-                <label for="chatOutputTextArea" class="form-label">聊天记录</label>
+                <div class="d-flex justify-content-between align-items-center mb-1"> @* Use flexbox for alignment *@
+                    <label for="chatOutputTextArea" class="form-label mb-0">聊天记录</label>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ClearChat">清空聊天记录</button> @* 新增清空按钮 *@
+                </div>
                 <textarea id="chatOutputTextArea" class="form-control" rows="20" readonly>@chatOutput</textarea>
             </div>
 
@@ -77,7 +80,7 @@
             <div class="row mb-2 align-items-center">
                 <label for="dbName" class="col-sm-6 col-form-label">MongoDB 数据库:</label>
                 <div class="col-sm-6">
-                    <input type="text" id="dbName" class="form-control form-control-sm" @bind="mongoDBDatabaseName" />
+                    <input type="text" id="dbName" class="form-control form-control-sm" @bind="MongoDBDatabaseName" />
                 </div>
             </div>
 
@@ -155,7 +158,30 @@
 
     private int historyCount = 10;
     private bool enableHistoryLimit = true; // Set default value to true
-    private string mongoDBDatabaseName = "ChatGPTDB";
+    // --- 修改：将字段改为私有备份字段 ---
+    private string _mongoDBDatabaseName = "ChatGPTDB";
+    // --- 新增：创建公共属性用于绑定和触发更新 ---
+    private string MongoDBDatabaseName
+    {
+        get => _mongoDBDatabaseName;
+        set
+        {
+            if (_mongoDBDatabaseName != value)
+            {
+                _mongoDBDatabaseName = value;
+                // 当数据库名称改变时，重新初始化 MongoDB 连接
+                InitializeMongoDB();
+                // 可选：清除当前聊天记录并从新数据库加载历史
+                // chatHistory.Clear();
+                // chatOutputBuilder.Clear();
+                // InvokeAsync(LoadChatHistoryFromDBAsync);
+                if (outputLevel == 3) AppendMessageToOutput($"DEBUG: MongoDB Database Name changed to '{_mongoDBDatabaseName}'. Re-initialized connection.");
+                // 可能需要调用 StateHasChanged() 如果 UI 需要立即响应变化，
+                // 但 InitializeMongoDB 内部的 AppendMessageToOutput 已经隐式调用了
+            }
+        }
+    }
+
     private string geminiApiUrl = defaultGeminiApiUrl;
     private string geminiApiKey = defaultGeminiApiKey;
     private string modelName = defaultModelName;
@@ -169,7 +195,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        InitializeMongoDB();
+        InitializeMongoDB(); // 初始加载时调用
         await LoadChatHistoryFromDBAsync();
         // --- 修改：仅在 Level 3 输出初始化信息 ---
         if (outputLevel == 3) AppendMessageToOutput("DEBUG: ChatGPT component initialized.");
@@ -179,11 +205,18 @@
     {
         try
         {
+            // 确保使用最新的连接字符串（如果它也可能改变的话）
+            // 如果连接字符串是固定的，则不需要每次都创建 MongoClient
+            // 为了简单起见，这里每次都创建新的 Client，但在高负载下可能需要优化
             mongoClient = new MongoClient(defaultMongoConnectionString);
-            database = mongoClient.GetDatabase(mongoDBDatabaseName);
+
+            // --- 修改：使用属性 MongoDBDatabaseName 来获取数据库 ---
+            database = mongoClient.GetDatabase(MongoDBDatabaseName);
             chatLogsCollection = database.GetCollection<BsonDocument>("ChatLogs");
             // --- 修改：仅在 Level 3 输出 MongoDB 初始化信息 ---
-            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: MongoDB initialized. Database: {mongoDBDatabaseName}, Collection: ChatLogs");
+            // --- 修改：确保日志输出也使用最新的数据库名 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: MongoDB initialized. Database: {MongoDBDatabaseName}, Collection: ChatLogs");
+            errorMessage = null; // Clear previous errors on successful init
         }
         catch (Exception ex)
         {
@@ -194,6 +227,7 @@
              database = null;
              chatLogsCollection = null;
         }
+        // StateHasChanged(); // 如果 InitializeMongoDB 可能在非渲染线程调用，则需要这个
     }
 
     private async Task LoadChatHistoryFromDBAsync()
@@ -518,6 +552,19 @@
         chatOutputBuilder.AppendLine(message);
         InvokeAsync(StateHasChanged);
     }
+
+    // --- 新增：清空聊天记录的方法 ---
+    private void ClearChat()
+    {
+        chatOutputBuilder.Clear(); // 清空显示的输出
+        chatHistory.Clear();       // 清空内存中的历史记录
+        errorMessage = null;       // 清除可能存在的错误信息
+        if (outputLevel >= 1) AppendMessageToOutput("聊天记录已清空。"); // 在输出区域显示提示
+        // StateHasChanged(); // AppendMessageToOutput 内部会调用 StateHasChanged
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: ClearChat method executed.");
+    }
+    // --- 结束新增 ---
+
 
     private void SaveChatLog(string userInput, string geminiResponse)
     {

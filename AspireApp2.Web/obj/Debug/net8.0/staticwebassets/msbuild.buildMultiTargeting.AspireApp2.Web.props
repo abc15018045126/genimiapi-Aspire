@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="..\build\AspireApp2.Web.props" />
-</Project>
