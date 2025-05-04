@@ -8,5 +8,5 @@ namespace Projects;
 public class AspireApp2_AppHost
 {
     private AspireApp2_AppHost() { }
-    public static string ProjectPath => """C:\Users\abc15\source\repos\AspireApp2\AspireApp2.AppHost""";
+    public static string ProjectPath => """C:\Users\abc15\Documents\GitHub\genimiapi-Aspire\AspireApp2.AppHost""";
 }

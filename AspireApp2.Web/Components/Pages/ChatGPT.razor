@@ -1,18 +1,18 @@
 @page "/chatgpt"
-@rendermode InteractiveServer 
-@* --- Added Render Mode --- *@ @* Moved comment to new line *@
-@inject HttpClient Http 
-@* --- Ensure HttpClient is injected --- *@ @* Moved comment to new line *@
-
-@* --- Added necessary using statements --- *@
+@rendermode InteractiveServer
+@inject HttpClient Http
+@using Microsoft.AspNetCore.Components.Web
 @using System.Text
 @using System.Net.Http
 @using System.Net.Http.Headers
 @using System.Net.Http.Json
 @using Newtonsoft.Json
 @using System.Collections.Generic
-@using Microsoft.AspNetCore.Components.Web // For KeyboardEventArgs
-@using System.Diagnostics // For Debug.WriteLine if needed later
+@using Microsoft.AspNetCore.Components
+@using System.Threading.Tasks
+@using System;
+@using MongoDB.Driver
+@using MongoDB.Bson
 
 <PageTitle>ChatGPT Client</PageTitle>
 
@@ -22,7 +22,10 @@
         @* Chat Display Area *@
         <div class="col-md-8">
             <div class="mb-3">
-                <label for="chatOutputTextArea" class="form-label">聊天记录</label>
+                <div class="d-flex justify-content-between align-items-center mb-1"> @* Use flexbox for alignment *@
+                    <label for="chatOutputTextArea" class="form-label mb-0">聊天记录</label>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ClearChat">清空聊天记录</button> @* 新增清空按钮 *@
+                </div>
                 <textarea id="chatOutputTextArea" class="form-control" rows="20" readonly>@chatOutput</textarea>
             </div>
 
@@ -53,7 +56,10 @@
         @* Configuration Area *@
         <div class="col-md-4">
             <h5>配置</h5>
-            <hr />
+            <div class="mb-3">
+                <label for="systemPrompt" class="form-label">系统提示词:</label>
+                <textarea id="systemPrompt" class="form-control form-control-sm" rows="3" @bind="systemPrompt"></textarea>
+            </div>
             <div class="row mb-2 align-items-center">
                 <label for="historyCount" class="col-sm-6 col-form-label">历史记录数量:</label>
                 <div class="col-sm-6">
@@ -74,7 +80,7 @@
             <div class="row mb-2 align-items-center">
                 <label for="dbName" class="col-sm-6 col-form-label">MongoDB 数据库:</label>
                 <div class="col-sm-6">
-                    <input type="text" id="dbName" class="form-control form-control-sm" @bind="mongoDBDatabaseName" />
+                    <input type="text" id="dbName" class="form-control form-control-sm" @bind="MongoDBDatabaseName" />
                 </div>
             </div>
 
@@ -119,29 +125,63 @@
                     <input type="number" id="topK" class="form-control form-control-sm" @bind="topK" />
                 </div>
             </div>
+
+
+            <div class="row mb-2 align-items-center">
+                <label for="outputLevel" class="col-sm-6 col-form-label">输出级别 (1-3):</label>
+                <div class="col-sm-6">
+                    <input type="number" id="outputLevel" class="form-control form-control-sm" @bind="outputLevel" />
+                </div>
+            </div>
+
+
+
         </div>
     </div>
 </div>
 
-@* --- Moved all C# code from ChatGPT.razor.cs here --- *@
 @code {
     private string? userInput;
     private StringBuilder chatOutputBuilder = new StringBuilder();
-    private string chatOutput => chatOutputBuilder.ToString();
+    private string chatOutput => chatOutputBuilder.ToString(); // Simplified getter
     private List<ChatMessage> chatHistory = new List<ChatMessage>();
-    private bool isSending = false; // To disable button during request
-    private string? errorMessage = null; // To display errors
+    private bool isSending = false;
+    private string? errorMessage = null;
+    private string? systemPrompt { get; set; }
 
-    // --- Default Values ---
+    private int outputLevel = 3; // Default level is 3
+
     private static readonly string defaultGeminiApiUrl = "https://gemini.abc15018045126.ip-ddns.com/v1/chat/completions";
-    private static readonly string defaultGeminiApiKey = "AIzaSyDmGfx7r-MP8XglVrGkcG51JtTsqSH31uI"; // Consider storing securely
+    private static readonly string defaultGeminiApiKey = "AIzaSyDmGfx7r-MP8XglVrGkcG51JtTsqSH31uI";
     private static readonly string defaultModelName = "gemini-2.0-flash";
-    // private static readonly string defaultMongoConnectionString = "mongodb://localhost:27017"; // MongoDB commented out
+    private static readonly string defaultMongoConnectionString = "mongodb://localhost:27017";
 
-    // --- Configuration Properties ---
     private int historyCount = 10;
-    private bool enableHistoryLimit = false;
-    private string mongoDBDatabaseName = "ChatGPTDB"; // MongoDB related, kept for UI binding
+    private bool enableHistoryLimit = true; // Set default value to true
+    // --- 修改：将字段改为私有备份字段 ---
+    private string _mongoDBDatabaseName = "ChatGPTDB";
+    // --- 新增：创建公共属性用于绑定和触发更新 ---
+    private string MongoDBDatabaseName
+    {
+        get => _mongoDBDatabaseName;
+        set
+        {
+            if (_mongoDBDatabaseName != value)
+            {
+                _mongoDBDatabaseName = value;
+                // 当数据库名称改变时，重新初始化 MongoDB 连接
+                InitializeMongoDB();
+                // 可选：清除当前聊天记录并从新数据库加载历史
+                // chatHistory.Clear();
+                // chatOutputBuilder.Clear();
+                // InvokeAsync(LoadChatHistoryFromDBAsync);
+                if (outputLevel == 3) AppendMessageToOutput($"DEBUG: MongoDB Database Name changed to '{_mongoDBDatabaseName}'. Re-initialized connection.");
+                // 可能需要调用 StateHasChanged() 如果 UI 需要立即响应变化，
+                // 但 InitializeMongoDB 内部的 AppendMessageToOutput 已经隐式调用了
+            }
+        }
+    }
+
     private string geminiApiUrl = defaultGeminiApiUrl;
     private string geminiApiKey = defaultGeminiApiKey;
     private string modelName = defaultModelName;
@@ -149,194 +189,359 @@
     private double? topP;
     private int? topK;
 
-    // MongoDB related fields (commented out)
-    // private IMongoClient mongoClient;
-    // private IMongoDatabase database;
-    // private IMongoCollection<BsonDocument> chatLogsCollection;
+    private IMongoClient? mongoClient;
+    private IMongoDatabase? database;
+    private IMongoCollection<BsonDocument>? chatLogsCollection;
 
-    // Initialize method (like constructor for Blazor components)
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // InitializeMongoDB(); // MongoDB commented out
-        AppendMessageToOutput("DEBUG: ChatGPT component initialized."); // Add init log
+        InitializeMongoDB(); // 初始加载时调用
+        await LoadChatHistoryFromDBAsync();
+        // --- 修改：仅在 Level 3 输出初始化信息 ---
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: ChatGPT component initialized.");
     }
 
-    // private void InitializeMongoDB() // MongoDB commented out
-    // { ... }
+    private void InitializeMongoDB()
+    {
+        try
+        {
+            // 确保使用最新的连接字符串（如果它也可能改变的话）
+            // 如果连接字符串是固定的，则不需要每次都创建 MongoClient
+            // 为了简单起见，这里每次都创建新的 Client，但在高负载下可能需要优化
+            mongoClient = new MongoClient(defaultMongoConnectionString);
+
+            // --- 修改：使用属性 MongoDBDatabaseName 来获取数据库 ---
+            database = mongoClient.GetDatabase(MongoDBDatabaseName);
+            chatLogsCollection = database.GetCollection<BsonDocument>("ChatLogs");
+            // --- 修改：仅在 Level 3 输出 MongoDB 初始化信息 ---
+            // --- 修改：确保日志输出也使用最新的数据库名 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: MongoDB initialized. Database: {MongoDBDatabaseName}, Collection: ChatLogs");
+            errorMessage = null; // Clear previous errors on successful init
+        }
+        catch (Exception ex)
+        {
+             errorMessage = $"Error initializing MongoDB: {ex.Message}";
+             // --- 修改：仅在 Level 3 输出 MongoDB 错误信息 ---
+             if (outputLevel == 3) AppendMessageToOutput($"DEBUG: MongoDB initialization failed: {ex.Message}");
+             mongoClient = null;
+             database = null;
+             chatLogsCollection = null;
+        }
+        // StateHasChanged(); // 如果 InitializeMongoDB 可能在非渲染线程调用，则需要这个
+    }
+
+    private async Task LoadChatHistoryFromDBAsync()
+    {
+        if (chatLogsCollection == null)
+        {
+            // --- 修改：仅在 Level 3 输出跳过信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: LoadChatHistoryFromDBAsync skipped - MongoDB not initialized.");
+            return;
+        }
+
+        if (!enableHistoryLimit || historyCount <= 0)
+        {
+             // --- 修改：仅在 Level 3 输出跳过信息 ---
+             if (outputLevel == 3) AppendMessageToOutput("DEBUG: LoadChatHistoryFromDBAsync skipped - History limit disabled or count is zero.");
+             return;
+        }
+
+
+        try
+        {
+            // --- 修改：仅在 Level 3 输出加载信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: Loading last {historyCount} chat entries from MongoDB...");
+
+            var filter = Builders<BsonDocument>.Filter.Empty;
+            var sort = Builders<BsonDocument>.Sort.Descending("Timestamp");
+            var options = new FindOptions<BsonDocument>
+            {
+                Sort = sort,
+                Limit = historyCount
+            };
+
+            var recentLogs = await chatLogsCollection.FindAsync(filter, options);
+            var loadedLogs = await recentLogs.ToListAsync();
+
+            chatHistory.Clear();
+            chatOutputBuilder.Clear(); // Clear builder before loading
+
+            for (int i = loadedLogs.Count - 1; i >= 0; i--)
+            {
+                var log = loadedLogs[i];
+                if (log.TryGetValue("UserInput", out var userBson) && userBson.IsString &&
+                    log.TryGetValue("GeminiResponse", out var geminiBson) && geminiBson.IsString)
+                {
+                    string userInput = userBson.AsString;
+                    string geminiResponse = geminiBson.AsString;
+
+                    chatHistory.Add(new ChatMessage { role = "user", content = userInput });
+                    chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponse });
+
+                    // --- Level 1+: Always show user and Gemini messages ---
+                    AppendMessageToOutput($"You: {userInput}");
+                    AppendMessageToOutput($"Gemini: {geminiResponse}");
+                }
+                else
+                {
+                     // --- 修改：仅在 Level 3 输出警告信息 ---
+                     if (outputLevel == 3) AppendMessageToOutput($"WARN: Skipping invalid log entry from DB: {log.ToJson()}");
+                }
+            }
+
+            // --- 修改：仅在 Level 3 输出加载完成信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: Loaded {loadedLogs.Count} entries ({chatHistory.Count} messages) from MongoDB.");
+            StateHasChanged(); // Update UI after loading
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading chat history from MongoDB: {ex.Message}";
+            // --- 修改：仅在 Level 3 输出加载错误信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: Error loading chat history: {ex.Message}");
+        }
+    }
+
 
     private async Task SendMessageAsync()
     {
-        AppendMessageToOutput("DEBUG: SendMessageAsync entered."); // Re-enable log
+        // --- 修改：仅在 Level 3 输出进入函数信息 ---
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync entered.");
+
         if (string.IsNullOrWhiteSpace(userInput))
         {
-            AppendMessageToOutput("DEBUG: SendMessageAsync returning - userInput is null or whitespace."); // Log reason for return
+            // --- 修改：仅在 Level 3 输出空输入信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync returning - userInput is null or whitespace.");
             return;
         }
         if (isSending)
         {
-            AppendMessageToOutput("DEBUG: SendMessageAsync returning - isSending is true."); // Log reason for return
+            // --- 修改：仅在 Level 3 输出正在发送信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync returning - isSending is true.");
             return;
         }
 
-        AppendMessageToOutput("DEBUG: SendMessageAsync - Setting isSending = true."); // Log before setting flag
+        // --- 修改：仅在 Level 3 输出设置状态信息 ---
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - Setting isSending = true.");
         isSending = true;
-        errorMessage = null; // Clear previous errors
-        StateHasChanged(); // Update UI to show spinner/disable button
+        errorMessage = null;
+        StateHasChanged();
 
-        string currentUserInput = userInput; // Capture user input
-        userInput = string.Empty; // Clear input box immediately
-        AppendMessageToOutput($"DEBUG: SendMessageAsync - Captured input: '{currentUserInput}'. Input box cleared."); // Log input capture
+        string currentUserInput = userInput;
+        userInput = string.Empty;
+        // --- 修改：仅在 Level 3 输出捕获输入信息 ---
+        if (outputLevel == 3) AppendMessageToOutput($"DEBUG: SendMessageAsync - Captured input: '{currentUserInput}'. Input box cleared.");
 
         try
         {
-            // Append user message to UI
+            // --- Level 1+: Always show user message ---
             AppendMessageToOutput($"You: {currentUserInput}");
-            AppendMessageToOutput("DEBUG: SendMessageAsync - About to call CallGeminiApiAsync."); // Log before calling API method
+            // --- 修改：仅在 Level 3 输出调用 API 信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - About to call CallGeminiApiAsync.");
 
             // --- Call Gemini API ---
             string geminiResponse = await CallGeminiApiAsync(currentUserInput);
-            AppendMessageToOutput("DEBUG: SendMessageAsync - CallGeminiApiAsync completed."); // Log after calling API method
-            AppendMessageToOutput($"Gemini: {geminiResponse}");
+            // --- 修改：仅在 Level 3 输出 API 调用完成信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - CallGeminiApiAsync completed.");
 
-            // --- Save Chat Log (Commented Out) ---
-            // SaveChatLog(currentUserInput, geminiResponse);
+            if (!geminiResponse.StartsWith("Error:"))
+            {
+                // --- Level 1+: Always show Gemini response if successful ---
+                AppendMessageToOutput($"Gemini: {geminiResponse}");
+                SaveChatLog(currentUserInput, geminiResponse); // Save only successful interactions
+            }
+            else
+            {
+                 // --- 修改：仅在 Level 3 输出 API 错误信息 ---
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: SendMessageAsync - Received error from CallGeminiApiAsync: {geminiResponse}");
+                 // Optionally display the error in the chat window regardless of level?
+                 // AppendMessageToOutput(geminiResponse); // Uncomment if you want errors shown in chat
+            }
         }
         catch (Exception ex)
         {
-            AppendMessageToOutput($"DEBUG: SendMessageAsync - Exception caught: {ex.Message}"); // Log exception
-            errorMessage = $"Error: {ex.Message}\n{ex.StackTrace}"; // Include stack trace for more details
+            // --- 修改：仅在 Level 3 输出异常信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: SendMessageAsync - Exception caught: {ex.Message}");
+            errorMessage = $"Error: {ex.Message}\n{ex.StackTrace}";
         }
         finally
         {
-            AppendMessageToOutput("DEBUG: SendMessageAsync - Finally block entered. Setting isSending = false."); // Log finally block entry
+            // --- 修改：仅在 Level 3 输出 finally 块信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync - Finally block entered. Setting isSending = false.");
             isSending = false;
-            StateHasChanged(); // Update UI (hide spinner, enable button, show error)
+            StateHasChanged();
         }
-        AppendMessageToOutput("DEBUG: SendMessageAsync finished."); // Log exit
+        // --- 修改：仅在 Level 3 输出函数结束信息 ---
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: SendMessageAsync finished.");
     }
 
     private async Task<string> CallGeminiApiAsync(string input)
     {
-        AppendMessageToOutput("DEBUG: CallGeminiApiAsync entered."); // Log entry
-        HttpResponseMessage? response = null; // Initialize response to null
-        string responseContent = "Error: Response was null."; // Default error message
+        // --- 修改：仅在 Level 3 输出进入函数信息 ---
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync entered.");
+        HttpResponseMessage? response = null;
+        string responseContent = "Error: Response was null.";
+
         try
         {
-            // Get current config values (use defaults if UI values are empty)
+            // Get current config values
             string apiUrl = string.IsNullOrEmpty(geminiApiUrl) ? defaultGeminiApiUrl : geminiApiUrl;
             string apiKey = string.IsNullOrEmpty(geminiApiKey) ? defaultGeminiApiKey : geminiApiKey;
             string currentModelName = string.IsNullOrEmpty(modelName) ? defaultModelName : modelName;
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Configs: URL='{apiUrl}', Key='{(string.IsNullOrEmpty(apiKey) ? "EMPTY" : "******")}', Model='{currentModelName}'.");
+            // --- 修改：仅在 Level 3 输出配置信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Configs: URL='{apiUrl}', Key='{(string.IsNullOrEmpty(apiKey) ? "EMPTY" : "******")}', Model='{currentModelName}'.");
 
-            chatHistory.Add(new ChatMessage { role = "user", content = input });
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added user message to history.");
+            var currentMessages = new List<ChatMessage>();
+
+            if (!string.IsNullOrWhiteSpace(systemPrompt))
+            {
+                currentMessages.Add(new ChatMessage { role = "system", content = systemPrompt });
+                if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added system prompt to current request messages.");
+            }
+
+            if (!enableHistoryLimit || historyCount > 0)
+            {
+                 currentMessages.AddRange(chatHistory.Where(m => m.role != "system"));
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Added {chatHistory.Count} messages from history to request.");
+            } else {
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - History limit enabled with count 0. Skipping adding history messages to request.");
+            }
+
+            currentMessages.Add(new ChatMessage { role = "user", content = input });
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added user message to current request messages.");
 
             if (enableHistoryLimit && historyCount > 0)
             {
-                while (chatHistory.Count > historyCount)
-                {
-                    chatHistory.RemoveAt(0);
-                }
-                AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - History limited to {historyCount}.");
+                 int messagesToKeep = historyCount * 2;
+                 if (!string.IsNullOrWhiteSpace(systemPrompt)) messagesToKeep += 1;
+                 int minMessages = string.IsNullOrWhiteSpace(systemPrompt) ? 1 : 2;
+
+                 while (currentMessages.Count > messagesToKeep && currentMessages.Count > minMessages)
+                 {
+                     int removeIndex = string.IsNullOrWhiteSpace(systemPrompt) ? 0 : 1;
+                     if (currentMessages.Count > removeIndex) currentMessages.RemoveAt(removeIndex);
+                     else break;
+                 }
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Message list limited (count > 0) for API call. Count: {currentMessages.Count}.");
             }
             else if (!enableHistoryLimit)
             {
-                 AppendMessageToOutput("DEBUG: CallGeminiApiAsync - History limit disabled.");
+                 // --- 修改：仅在 Level 3 输出历史限制禁用信息 ---
+                 if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - History limit disabled.");
             }
+
 
             var requestBody = new Dictionary<string, object>
             {
                 { "model", currentModelName },
-                { "messages", chatHistory }
+                { "messages", currentMessages }
             };
             if (temperature.HasValue) requestBody["temperature"] = temperature.Value;
             if (topP.HasValue) requestBody["top_p"] = topP.Value;
             if (topK.HasValue) requestBody["top_k"] = topK.Value;
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built.");
+            // --- 修改：仅在 Level 3 输出请求体构建信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built.");
 
             string jsonContent = JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.Indented);
-            AppendMessageToOutput("Request Body:\n" + jsonContent);
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body serialized.");
+            // --- 修改：仅在 Level 2 或 3 输出请求体 ---
+            if (outputLevel >= 2)
+            {
+                AppendMessageToOutput("Request Body:\n" + jsonContent);
+            }
+            // --- 修改：仅在 Level 3 输出序列化信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body serialized.");
 
-            // --- Prepare and Send HTTP request ---
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Preparing HttpRequestMessage..."); // Log before creating request object
-            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl); // Use 'using' for disposable object
+            // Prepare and Send HTTP request
+            // --- 修改：仅在 Level 3 输出准备请求信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Preparing HttpRequestMessage...");
+            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - HttpRequestMessage prepared.");
+            // --- 修改：仅在 Level 3 输出请求准备完成信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - HttpRequestMessage prepared.");
 
-            AppendMessageToOutput("DEBUG: CallGeminiApiAsync - >>>>>>>> ABOUT TO SEND HTTP REQUEST via Http.SendAsync <<<<<<<<");
+            // --- 修改：仅在 Level 3 输出发送请求信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - >>>>>>>> ABOUT TO SEND HTTP REQUEST via Http.SendAsync <<<<<<<<");
+            response = await Http.SendAsync(request);
+            // --- 修改：仅在 Level 3 输出请求完成信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Http.SendAsync completed. Status Code: {(response?.StatusCode.ToString() ?? "N/A")}");
 
-            response = await Http.SendAsync(request); // Potential assignment
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Http.SendAsync completed. Status Code: {response.StatusCode}");
-
-            // --- Check if response is not null before reading content ---
             if (response != null)
             {
                 responseContent = await response.Content.ReadAsStringAsync();
-                AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response content read.");
+                // --- 修改：仅在 Level 3 输出读取响应内容信息 ---
+                if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response content read.");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Non-success status code: {response.StatusCode}. Response: {responseContent}");
+                    // --- 修改：仅在 Level 3 输出非成功状态码信息 ---
+                    if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Non-success status code: {response.StatusCode}. Response: {responseContent}");
                     return $"Error: API request failed with status {response.StatusCode}. Response: {responseContent}";
                 }
 
-                // --- Process successful response ---
-                AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsing successful response.");
+                // Process successful response
+                // --- 修改：仅在 Level 3 输出解析响应信息 ---
+                if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsing successful response.");
                 dynamic responseObject = JsonConvert.DeserializeObject(responseContent) ?? throw new Exception("Failed to parse API response (result was null).");
 
-                // --- Updated parsing logic based on common API structures ---
-                // Check for 'choices' array (like OpenAI, maybe Gemini too?)
+                string? geminiResponseText = null;
+                // Try parsing 'choices' structure (OpenAI style)
                 if (responseObject.choices != null && responseObject.choices.Count > 0 && responseObject.choices[0].message != null && responseObject.choices[0].message.content != null)
                 {
-                    string geminiResponseText = responseObject.choices[0].message.content;
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'choices[0].message.content'.");
-                    chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponseText });
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
-                    return geminiResponseText;
+                    geminiResponseText = responseObject.choices[0].message.content;
+                    // --- 修改：仅在 Level 3 输出解析路径信息 ---
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'choices[0].message.content'.");
                 }
-                // Check for 'candidates' array (like older Google AI Platform or some Gemini versions?)
+                // Try parsing 'candidates' structure (Google AI/Gemini style)
                 else if (responseObject.candidates != null && responseObject.candidates.Count > 0 && responseObject.candidates[0].content != null && responseObject.candidates[0].content.parts != null && responseObject.candidates[0].content.parts.Count > 0 && responseObject.candidates[0].content.parts[0].text != null)
                 {
-                    string geminiResponseText = responseObject.candidates[0].content.parts[0].text;
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'candidates[0].content.parts[0].text'.");
+                    geminiResponseText = responseObject.candidates[0].content.parts[0].text;
+                     // --- 修改：仅在 Level 3 输出解析路径信息 ---
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Parsed 'candidates[0].content.parts[0].text'.");
+                }
+
+                if (geminiResponseText != null)
+                {
                     chatHistory.Add(new ChatMessage { role = "assistant", content = geminiResponseText });
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
-                    AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
+                    // --- 修改：仅在 Level 3 输出添加助手消息到历史记录信息 ---
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Added assistant message to history.");
+                    // --- 修改：仅在 Level 3 输出成功完成信息 ---
+                    if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync finished successfully.");
                     return geminiResponseText;
                 }
                 else
                 {
-                     AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Unexpected API response format. Raw response: " + responseContent);
+                     // --- 修改：仅在 Level 3 输出未知格式信息 ---
+                     if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Unexpected API response format. Raw response: " + responseContent);
+                     errorMessage = "Error: Unexpected API response format.";
                      throw new Exception("Unexpected API response format. Could not find message content.");
                 }
             }
             else
             {
-                 AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response object was null after SendAsync.");
-                 // responseContent is already set to "Error: Response was null."
+                 // --- 修改：仅在 Level 3 输出空响应对象信息 ---
+                 if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Response object was null after SendAsync.");
+                 errorMessage = "Error: No response received from API.";
             }
-
         }
         catch (HttpRequestException httpEx)
         {
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - HttpRequestException: {httpEx.Message}");
+            // --- 修改：仅在 Level 3 输出 HttpRequestException 信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - HttpRequestException: {httpEx.Message}");
             if (response != null) {
-                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore read error */ }
-                 AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Response content during exception: {responseContent}");
+                 try { responseContent = await response.Content.ReadAsStringAsync(); } catch { /* Ignore */ }
+                 if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Response content during exception: {responseContent}");
             } else {
                  responseContent = $"HttpRequestException: {httpEx.Message}";
             }
-            errorMessage = $"Network Error: {httpEx.Message}"; // Update user-facing error
-            return $"Error: {httpEx.Message}"; // Return error string
+            errorMessage = $"Network Error: {httpEx.Message}";
+            return $"Error: {httpEx.Message}";
         }
         catch (Exception ex)
         {
-            AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - General Exception: {ex.Message}\nStackTrace: {ex.StackTrace}"); // Add StackTrace
-            errorMessage = $"An unexpected error occurred: {ex.Message}"; // Update user-facing error
-            return $"Error: {ex.Message}"; // Return error string
+            // --- 修改：仅在 Level 3 输出通用异常信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - General Exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+            return $"Error: {ex.Message}";
         }
 
         return responseContent; // Fallback return
@@ -345,14 +550,52 @@
     private void AppendMessageToOutput(string message)
     {
         chatOutputBuilder.AppendLine(message);
-        InvokeAsync(StateHasChanged); // Use InvokeAsync for thread safety
-        // Consider adding JS interop to scroll the textarea down automatically
+        InvokeAsync(StateHasChanged);
     }
 
-    // MongoDB Save Method (Commented Out)
-    // private void SaveChatLog(string userInput, string geminiResponse)
-    // { ... }
+    // --- 新增：清空聊天记录的方法 ---
+    private void ClearChat()
+    {
+        chatOutputBuilder.Clear(); // 清空显示的输出
+        chatHistory.Clear();       // 清空内存中的历史记录
+        errorMessage = null;       // 清除可能存在的错误信息
+        if (outputLevel >= 1) AppendMessageToOutput("聊天记录已清空。"); // 在输出区域显示提示
+        // StateHasChanged(); // AppendMessageToOutput 内部会调用 StateHasChanged
+        if (outputLevel == 3) AppendMessageToOutput("DEBUG: ClearChat method executed.");
+    }
+    // --- 结束新增 ---
 
+
+    private void SaveChatLog(string userInput, string geminiResponse)
+    {
+        if (chatLogsCollection == null)
+        {
+             // --- 修改：仅在 Level 3 输出跳过保存信息 ---
+             if (outputLevel == 3) AppendMessageToOutput("DEBUG: SaveChatLog skipped - MongoDB not initialized.");
+             return;
+        }
+
+        try
+        {
+            var document = new BsonDocument
+            {
+                { "Timestamp", DateTime.UtcNow },
+                { "UserInput", userInput },
+                { "GeminiResponse", geminiResponse },
+                { "Model", string.IsNullOrEmpty(modelName) ? defaultModelName : modelName },
+                { "SystemPrompt", systemPrompt ?? string.Empty }
+            };
+            chatLogsCollection.InsertOne(document);
+            // --- 修改：仅在 Level 3 输出保存成功信息 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: Chat log saved to MongoDB.");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving chat log to MongoDB: {ex.Message}";
+            // --- 修改：仅在 Level 3 输出保存错误信息 ---
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: Error saving chat log: {ex.Message}");
+        }
+    }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
@@ -362,10 +605,32 @@
         }
     }
 
-    // Data model for chat messages
     public class ChatMessage
     {
         public string role { get; set; } = string.Empty;
         public string content { get; set; } = string.Empty;
+    }
+
+    private void UpdatePersistentHistory(string userInput, string assistantResponse)
+    {
+        if (enableHistoryLimit && historyCount == 0)
+        {
+            chatHistory.Clear();
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: UpdatePersistentHistory - Persistent history cleared (limit is 0).");
+        }
+
+        chatHistory.Add(new ChatMessage { role = "user", content = userInput });
+        chatHistory.Add(new ChatMessage { role = "assistant", content = assistantResponse });
+        if (outputLevel == 3) AppendMessageToOutput($"DEBUG: UpdatePersistentHistory - Added user/assistant messages. History count: {chatHistory.Count}");
+
+        if (enableHistoryLimit && historyCount > 0)
+        {
+            int maxHistoryMessages = historyCount * 2;
+            while (chatHistory.Count > maxHistoryMessages && maxHistoryMessages >= 0)
+            {
+                chatHistory.RemoveAt(0);
+            }
+            if (outputLevel == 3) AppendMessageToOutput($"DEBUG: UpdatePersistentHistory - Persistent history limited (count > 0) to {chatHistory.Count} messages.");
+        }
     }
 }
