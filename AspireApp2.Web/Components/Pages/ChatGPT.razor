@@ -429,17 +429,29 @@
                  if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - History limit disabled.");
             }
 
+            // --- 新增：替换消息内容中的换行符为空格 ---
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Checking and replacing newlines in message content...");
+            foreach (var message in currentMessages)
+            {
+                if (message.content != null && (message.content.Contains('\n') || message.content.Contains('\r')))
+                {
+                    // 同时替换 \r\n, \n, \r 为空格
+                    message.content = System.Text.RegularExpressions.Regex.Replace(message.content, @"\r\n?|\n", " ");
+                    if (outputLevel == 3) AppendMessageToOutput($"DEBUG: CallGeminiApiAsync - Replaced newlines in message with role '{message.role}'.");
+                }
+            }
+            // --- 结束新增 ---
 
             var requestBody = new Dictionary<string, object>
             {
                 { "model", currentModelName },
-                { "messages", currentMessages }
+                { "messages", currentMessages } // 现在 currentMessages 中的 content 不含换行符
             };
             if (temperature.HasValue) requestBody["temperature"] = temperature.Value;
             if (topP.HasValue) requestBody["top_p"] = topP.Value;
             if (topK.HasValue) requestBody["top_k"] = topK.Value;
             // --- 修改：仅在 Level 3 输出请求体构建信息 ---
-            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built.");
+            if (outputLevel == 3) AppendMessageToOutput("DEBUG: CallGeminiApiAsync - Request body built (newlines replaced).");
 
             string jsonContent = JsonConvert.SerializeObject(requestBody, Newtonsoft.Json.Formatting.Indented);
             // --- 修改：仅在 Level 2 或 3 输出请求体 ---
